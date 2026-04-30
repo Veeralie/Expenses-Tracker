@@ -26,6 +26,7 @@ import {
   saveTransaction,
   updateTransaction,
   deleteTransaction,
+  createNextRecurringTransaction,
   Transaction,
 } from "../lib/supabase";
 
@@ -278,9 +279,34 @@ export default function Home() {
   };
 
   const markAsPaid = async (id: string) => {
-    const updated = transactions.map((t) =>
-      t.id === id ? { ...t, status: "paid" as const } : t
+  const transaction = transactions.find((t) => t.id === id);
+  if (!transaction) return;
+
+  const paidTransaction = {
+    ...transaction,
+    status: "paid" as const,
+  };
+
+  await updateTransaction(paidTransaction);
+
+  let nextTransaction: Transaction | null = null;
+
+  if (
+    transaction.type === "expense" &&
+    transaction.recurrence &&
+    transaction.recurrence !== "none"
+  ) {
+    nextTransaction = await createNextRecurringTransaction(transaction);
+  }
+
+  setTransactions((current) => {
+    const updated = current.map((t) =>
+      t.id === id ? paidTransaction : t
     );
+
+    return nextTransaction ? [nextTransaction, ...updated] : updated;
+  });
+};
 
     const changed = updated.find((t) => t.id === id);
     if (changed) await updateTransaction(changed);
