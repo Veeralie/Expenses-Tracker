@@ -86,6 +86,7 @@ export default function Home() {
   const [email, setEmail] = useState("");
   const [authMessage, setAuthMessage] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
 
   const [form, setForm] = useState({
     name: "",
@@ -124,6 +125,16 @@ export default function Home() {
         return;
       }
 
+      useEffect(() => {
+  if (cooldown === 0) return;
+
+  const timer = setInterval(() => {
+    setCooldown((prev) => prev - 1);
+  }, 1000);
+
+  return () => clearInterval(timer);
+}, [cooldown]);
+      
       const data = await getTransactions();
       setTransactions(data);
     };
@@ -154,11 +165,12 @@ export default function Home() {
 
   setAuthLoading(false);
 
-  setAuthMessage(
-    error
-      ? error.message
-      : "Login link sent. Please check your email, then click the confirmation link."
-  );
+  if (error) {
+    setAuthMessage("Too many login emails. Please wait a moment.");
+  } else {
+    setAuthMessage("Login link sent. Check your email.");
+    setCooldown(900); // ⏱ 900 second cooldown
+  }
 };
 
   const signOut = async () => {
@@ -369,14 +381,18 @@ export default function Home() {
             className="mb-3 w-full rounded-2xl bg-white p-3 text-slate-900"
           />
 
-          <button
+<button
   onClick={signIn}
-  disabled={authLoading}
+  disabled={authLoading || cooldown > 0}
   className="w-full rounded-2xl bg-blue-500 p-3 font-bold text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
 >
-  {authLoading ? "Sending..." : "Send Login Link"}
+  {authLoading
+    ? "Sending..."
+    : cooldown > 0
+    ? `Wait ${cooldown}s`
+    : "Send Login Link"}
 </button>
-
+          
           {authMessage && (
             <p className="mt-4 rounded-xl bg-white/10 p-3 text-sm text-blue-100">
               {authMessage}
