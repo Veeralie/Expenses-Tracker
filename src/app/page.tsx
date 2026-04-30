@@ -36,34 +36,37 @@ const currencySymbols: Record<string, string> = {
 };
 
 const categories = [
-  "Food",
-  "Entertainment",
-  "Shopping",
-  "School",
-  "Kids",
   "Bills",
-  "Salary",
-  "Bonus",
-  "Investment",
-  "Other",
+  "Food",
+  "Transport",
+  "Insurance",
+  "Childcare",
+  "Utilities",
+  "Connectivity",
+  "School",
+  "Customize",
 ];
 
 export default function Home() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [currency, setCurrency] = useState("USD");
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+  const [selectedDate, setSelectedDate] = useState(
+    new Date().toISOString().slice(0, 10)
+  );
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [customCategory, setCustomCategory] = useState("");
 
   const [form, setForm] = useState({
     name: "",
     amount: "",
     type: "expense",
-    category: "Food",
+    category: "Bills",
     date: new Date().toISOString().slice(0, 10),
   });
 
   useEffect(() => {
     setTransactions(getTransactions());
+
     const savedCurrency = localStorage.getItem("currency");
     if (savedCurrency) setCurrency(savedCurrency);
   }, []);
@@ -73,13 +76,19 @@ export default function Home() {
     saveTransactions(data);
   };
 
+  const finalCategory =
+    form.category === "Customize" && customCategory.trim()
+      ? customCategory.trim()
+      : form.category;
+
   const resetForm = () => {
     setEditingId(null);
+    setCustomCategory("");
     setForm({
       name: "",
       amount: "",
       type: "expense",
-      category: "Food",
+      category: "Bills",
       date: selectedDate,
     });
   };
@@ -95,7 +104,7 @@ export default function Home() {
               name: form.name,
               amount: Number(form.amount),
               type: form.type as "expense" | "income",
-              category: form.category,
+              category: finalCategory,
               date: form.date,
             }
           : t
@@ -111,7 +120,7 @@ export default function Home() {
       name: form.name,
       amount: Number(form.amount),
       type: form.type as "expense" | "income",
-      category: form.category,
+      category: finalCategory,
       date: form.date,
     };
 
@@ -120,12 +129,16 @@ export default function Home() {
   };
 
   const handleEdit = (t: Transaction) => {
+    const isPresetCategory = categories.includes(t.category);
+
     setEditingId(t.id);
+    setCustomCategory(isPresetCategory ? "" : t.category);
+
     setForm({
       name: t.name,
       amount: String(t.amount),
       type: t.type,
-      category: t.category || "Other",
+      category: isPresetCategory ? t.category : "Customize",
       date: t.date?.slice(0, 10) || selectedDate,
     });
   };
@@ -155,7 +168,14 @@ export default function Home() {
   );
 
   const chartData = useMemo(() => {
-    return categories.map((cat) => ({
+    const allCategories = Array.from(
+      new Set([
+        ...categories.filter((c) => c !== "Customize"),
+        ...transactions.map((t) => t.category),
+      ])
+    );
+
+    return allCategories.map((cat) => ({
       category: cat,
       amount: transactions
         .filter((t) => t.type === "expense" && t.category === cat)
@@ -176,7 +196,8 @@ export default function Home() {
                 Expenses Tracker
               </h1>
               <p className="mt-2 max-w-2xl text-blue-100">
-                Track income, expenses, bills, calendar payments, and spending trends.
+                Track income, expenses, bills, calendar payments, and spending
+                trends.
               </p>
             </div>
 
@@ -257,13 +278,24 @@ export default function Home() {
 
               <select
                 value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, category: e.target.value })
+                }
                 className="w-full rounded-2xl border border-white/10 bg-white/90 p-3 text-slate-900"
               >
                 {categories.map((c) => (
                   <option key={c}>{c}</option>
                 ))}
               </select>
+
+              {form.category === "Customize" && (
+                <input
+                  placeholder="Enter custom category"
+                  value={customCategory}
+                  onChange={(e) => setCustomCategory(e.target.value)}
+                  className="w-full rounded-2xl border border-white/10 bg-white/90 p-3 text-slate-900"
+                />
+              )}
 
               <input
                 type="date"
