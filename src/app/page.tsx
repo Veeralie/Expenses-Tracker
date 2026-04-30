@@ -75,17 +75,21 @@ const getDueLabel = (t: Transaction) => {
 export default function Home() {
   
   useEffect(() => {
-    const testSupabase = async () => {
+  const testSupabase = async () => {
+    try {
       const { data, error } = await supabase
         .from("transactions")
         .select("*");
 
       console.log("Supabase data:", data);
       console.log("Supabase error:", error);
-    };
+    } catch (err) {
+      console.log("Unexpected error:", err);
+    }
+  };
 
-    testSupabase();
-  }, []);
+  testSupabase();
+}, []);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [currency, setCurrency] = useState("USD");
   const [currentMonth, setCurrentMonth] = useState(new Date());
