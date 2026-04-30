@@ -85,6 +85,7 @@ export default function Home() {
 
   setupAuth();
 
+useEffect(() => {
   const { data } = supabase.auth.onAuthStateChange((_event, session) => {
     setUser(session?.user ?? null);
   });
@@ -110,10 +111,7 @@ useEffect(() => {
 
   loadTransactions();
 }, [user]);
-  };
 
-  testSupabase();
-}, []);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [currency, setCurrency] = useState("USD");
   const [currentMonth, setCurrentMonth] = useState(new Date());
