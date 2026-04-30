@@ -5,6 +5,9 @@ export type Transaction = {
   type: "expense" | "income";
   category: string;
   date: string;
+  recurrence?: "none" | "weekly" | "monthly" | "annually";
+  dueDate?: string;
+  status?: "pending" | "paid";
 };
 
 export const getTransactions = (): Transaction[] => {
