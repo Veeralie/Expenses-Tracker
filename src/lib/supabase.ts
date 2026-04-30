@@ -1,22 +1,36 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = "https://flonbyhyhafzyqcmbqxi.supabase.co";
-const supabaseAnonKey = "sb_publishable_0ynt254GmfAKKURC9D7qLA_OKEjRgPB";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export type Transaction = {
-  id?: string;
+  id: string;
   name: string;
   amount: number;
   type: "income" | "expense";
   category: string;
   date: string;
-  recurrence: "none" | "weekly" | "monthly" | "annually";
+  recurrence?: "none" | "weekly" | "monthly" | "annually";
   dueDate?: string;
   status?: "pending" | "paid";
 };
 
+// 🔁 Map DB → App format
+const mapFromDb = (row: any): Transaction => ({
+  id: row.id,
+  name: row.name,
+  amount: Number(row.amount),
+  type: row.type,
+  category: row.category,
+  date: row.date,
+  recurrence: row.recurrence || "none",
+  dueDate: row.due_date || row.date,
+  status: row.status || "pending",
+});
+
+// 📥 GET
 export async function getTransactions(): Promise<Transaction[]> {
   const { data, error } = await supabase
     .from("transactions")
@@ -24,28 +38,44 @@ export async function getTransactions(): Promise<Transaction[]> {
     .order("date", { ascending: false });
 
   if (error) {
-    console.error(error);
+    console.error("Fetch error:", error);
     return [];
   }
 
-  return data || [];
+  return data.map(mapFromDb);
 }
 
-export async function saveTransaction(tx: Transaction) {
+// ➕ CREATE
+export async function saveTransaction(
+  transaction: Omit<Transaction, "id">
+): Promise<Transaction | null> {
   const { data, error } = await supabase
     .from("transactions")
-    .insert([tx])
+    .insert([
+      {
+        name: transaction.name,
+        amount: transaction.amount,
+        type: transaction.type,
+        category: transaction.category,
+        date: transaction.date,
+        recurrence: transaction.recurrence,
+        due_date: transaction.dueDate,
+        status: transaction.status || "pending",
+      },
+    ])
     .select()
     .single();
 
   if (error) {
-    console.error(error);
+    console.error("Insert error:", error);
+    alert(error.message);
     return null;
   }
 
-  return data;
+  return mapFromDb(data);
 }
 
+// ✏️ UPDATE (fixed version)
 export async function updateTransaction(
   transaction: Transaction
 ): Promise<Transaction | null> {
@@ -66,7 +96,7 @@ export async function updateTransaction(
     .single();
 
   if (error) {
-    console.error("Update transaction error:", error);
+    console.error("Update error:", error);
     alert(error.message);
     return null;
   }
@@ -74,6 +104,7 @@ export async function updateTransaction(
   return mapFromDb(data);
 }
 
+// ❌ DELETE
 export async function deleteTransaction(id: string) {
   const { error } = await supabase
     .from("transactions")
@@ -81,6 +112,7 @@ export async function deleteTransaction(id: string) {
     .eq("id", id);
 
   if (error) {
-    console.error(error);
+    console.error("Delete error:", error);
+    alert(error.message);
   }
 }
