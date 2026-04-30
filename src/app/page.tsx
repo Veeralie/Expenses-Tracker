@@ -394,14 +394,18 @@ export default function Home() {
             </div>
 
             <div className="flex flex-col gap-3 md:flex-row">
-              <select
-                value={currency}
-                onChange={(e) => {
-                  setCurrency(e.target.value);
-                  localStorage.setItem("currency", e.target.value);
-                }}
-                className="rounded-2xl border border-white/20 bg-white/90 p-3 font-semibold text-slate-900 shadow-lg"
-              >
+  <p className="rounded-2xl bg-white/15 px-4 py-3 text-sm font-semibold text-blue-100">
+    {user.email}
+  </p>
+
+  <select
+    value={currency}
+    onChange={(e) => {
+      setCurrency(e.target.value);
+      localStorage.setItem("currency", e.target.value);
+    }}
+    className="rounded-2xl border border-white/20 bg-white/90 p-3 font-semibold text-slate-900 shadow-lg"
+  >
                 <option value="USD">USD - US Dollar</option>
                 <option value="GBP">GBP - British Pound</option>
                 <option value="EUR">EUR - Euro</option>
@@ -413,12 +417,12 @@ export default function Home() {
               </select>
 
               <button
-                onClick={signOut}
-                className="rounded-2xl bg-white/20 px-4 py-3 font-bold text-white hover:bg-white/30"
-              >
-                Logout
-              </button>
-            </div>
+    onClick={signOut}
+    className="rounded-2xl bg-white/20 px-4 py-3 font-bold text-white hover:bg-white/30"
+  >
+    Logout
+  </button>
+</div>
           </div>
         </section>
 
