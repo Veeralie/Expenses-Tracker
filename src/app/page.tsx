@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { supabase } from "../lib/supabase";
 import {
   CalendarDays,
   CheckCircle,
@@ -72,6 +73,19 @@ const getDueLabel = (t: Transaction) => {
 };
 
 export default function Home() {
+  
+  useEffect(() => {
+    const testSupabase = async () => {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("*");
+
+      console.log("Supabase data:", data);
+      console.log("Supabase error:", error);
+    };
+
+    testSupabase();
+  }, []);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [currency, setCurrency] = useState("USD");
   const [currentMonth, setCurrentMonth] = useState(new Date());
