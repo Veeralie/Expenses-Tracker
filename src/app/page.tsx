@@ -26,7 +26,7 @@ import {
   updateTransaction,
   deleteTransaction,
   Transaction,
-} from "../lib/sampleData";
+} from "../lib/supabase";
 
 const currencySymbols: Record<string, string> = {
   USD: "$",
