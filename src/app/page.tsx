@@ -55,11 +55,7 @@ const daysUntilDue = (dueDate?: string) => {
 
   const today = new Date(todayString());
   const due = new Date(dueDate);
-  const diff = Math.ceil(
-    (due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-  );
-
-  return diff;
+  return Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 };
 
 const getDueLabel = (t: Transaction) => {
@@ -78,6 +74,7 @@ const getDueLabel = (t: Transaction) => {
 export default function Home() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [currency, setCurrency] = useState("USD");
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(todayString());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [customCategory, setCustomCategory] = useState("");
@@ -185,7 +182,7 @@ export default function Home() {
       category: isPresetCategory ? t.category : "Customize",
       date: t.date?.slice(0, 10) || selectedDate,
       recurrence: t.recurrence || "none",
-      dueDate: t.dueDate?.slice(0, 10) || t.date?.slice(0, 10) || selectedDate,
+      dueDate: t.dueDate?.slice(0, 10) || selectedDate,
     });
   };
 
@@ -194,16 +191,15 @@ export default function Home() {
   };
 
   const markAsPaid = (id: string) => {
-    const updated = transactions.map((t) =>
-      t.id === id ? { ...t, status: "paid" as const } : t
+    saveAll(
+      transactions.map((t) =>
+        t.id === id ? { ...t, status: "paid" as const } : t
+      )
     );
-
-    saveAll(updated);
   };
 
   const extendDueDate = (id: string) => {
     const days = prompt("Extend by how many days?");
-
     if (!days || Number.isNaN(Number(days))) return;
 
     const updated = transactions.map((t) => {
@@ -222,6 +218,25 @@ export default function Home() {
     saveAll(updated);
   };
 
+  const getCalendarDays = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    const blanks = Array(firstDay.getDay()).fill(null);
+
+    const days = Array.from({ length: lastDay.getDate() }, (_, i) => {
+      const d = new Date(year, month, i + 1);
+      return d.toISOString().slice(0, 10);
+    });
+
+    return [...blanks, ...days];
+  };
+
+  const calendarDays = getCalendarDays(currentMonth);
+
   const income = transactions
     .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + t.amount, 0);
@@ -239,12 +254,6 @@ export default function Home() {
   const dueSoonCount = transactions.filter(
     (t) => getDueLabel(t) === "Due Soon" || getDueLabel(t) === "Due Today"
   ).length;
-
-  const days = Array.from({ length: 30 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - 14 + i);
-    return d.toISOString().slice(0, 10);
-  });
 
   const selectedTransactions = transactions.filter(
     (t) => t.date?.slice(0, 10) === selectedDate
@@ -479,13 +488,85 @@ export default function Home() {
 
         <section className="mt-6 grid gap-6 lg:grid-cols-2">
           <div className="rounded-[2rem] border border-white/10 bg-white/10 p-5 shadow-2xl backdrop-blur">
-            <h2 className="mb-4 text-2xl font-bold">Calendar</h2>
+            <div className="mb-4 flex items-center justify-between">
+              <button
+                onClick={() =>
+                  setCurrentMonth(
+                    new Date(
+                      currentMonth.getFullYear(),
+                      currentMonth.getMonth() - 1,
+                      1
+                    )
+                  )
+                }
+                className="rounded-xl bg-white/20 px-4 py-2 font-bold hover:bg-white/30"
+              >
+                ←
+              </button>
 
-            <div className="grid grid-cols-5 gap-2 md:grid-cols-7">
-              {days.map((day) => {
-                const count = transactions.filter(
+              <div className="text-center">
+                <h2 className="text-2xl font-black">
+                  {currentMonth.toLocaleString("default", {
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </h2>
+                <p className="text-sm text-blue-100">
+                  Select a date to manage payments
+                </p>
+              </div>
+
+              <button
+                onClick={() =>
+                  setCurrentMonth(
+                    new Date(
+                      currentMonth.getFullYear(),
+                      currentMonth.getMonth() + 1,
+                      1
+                    )
+                  )
+                }
+                className="rounded-xl bg-white/20 px-4 py-2 font-bold hover:bg-white/30"
+              >
+                →
+              </button>
+            </div>
+
+            <div className="mb-2 grid grid-cols-7 gap-2 text-center text-xs font-bold uppercase text-blue-100">
+              <div>Sun</div>
+              <div>Mon</div>
+              <div>Tue</div>
+              <div>Wed</div>
+              <div>Thu</div>
+              <div>Fri</div>
+              <div>Sat</div>
+            </div>
+
+            <div className="grid grid-cols-7 gap-2">
+              {calendarDays.map((day, index) => {
+                if (!day) {
+                  return (
+                    <div
+                      key={`blank-${index}`}
+                      className="min-h-20 rounded-2xl bg-white/5"
+                    />
+                  );
+                }
+
+                const dayTransactions = transactions.filter(
                   (t) => t.date?.slice(0, 10) === day
-                ).length;
+                );
+
+                const dayIncome = dayTransactions
+                  .filter((t) => t.type === "income")
+                  .reduce((sum, t) => sum + t.amount, 0);
+
+                const dayExpenses = dayTransactions
+                  .filter((t) => t.type === "expense")
+                  .reduce((sum, t) => sum + t.amount, 0);
+
+                const isToday = day === todayString();
+                const isSelected = day === selectedDate;
 
                 return (
                   <button
@@ -494,20 +575,55 @@ export default function Home() {
                       setSelectedDate(day);
                       setForm({ ...form, date: day, dueDate: day });
                     }}
-                    className={`rounded-2xl p-3 text-sm font-bold shadow ${
-                      selectedDate === day
+                    className={`min-h-20 rounded-2xl p-2 text-left shadow transition hover:scale-[1.02] ${
+                      isSelected
                         ? "bg-blue-500 text-white"
+                        : isToday
+                        ? "bg-yellow-100 text-slate-900"
                         : "bg-white/90 text-slate-900 hover:bg-blue-100"
                     }`}
                   >
-                    <div>{new Date(day).getDate()}</div>
-                    <div className="text-xs opacity-70">
-                      {new Date(day).toLocaleString("default", {
-                        month: "short",
-                      })}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-black">
+                        {new Date(day).getDate()}
+                      </span>
+
+                      {isToday && (
+                        <span className="rounded-full bg-yellow-400 px-2 py-0.5 text-[10px] font-bold text-slate-900">
+                          Today
+                        </span>
+                      )}
                     </div>
-                    {count > 0 && (
-                      <div className="mx-auto mt-1 h-2 w-2 rounded-full bg-rose-500" />
+
+                    {dayTransactions.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {dayIncome > 0 && (
+                          <p className="truncate text-[11px] font-bold text-emerald-600">
+                            +{currencySymbols[currency]}
+                            {dayIncome}
+                          </p>
+                        )}
+
+                        {dayExpenses > 0 && (
+                          <p className="truncate text-[11px] font-bold text-rose-600">
+                            -{currencySymbols[currency]}
+                            {dayExpenses}
+                          </p>
+                        )}
+
+                        <div className="flex gap-1">
+                          {dayTransactions.slice(0, 3).map((tx) => (
+                            <span
+                              key={tx.id}
+                              className={`h-2 w-2 rounded-full ${
+                                tx.type === "income"
+                                  ? "bg-emerald-500"
+                                  : "bg-rose-500"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </button>
                 );
