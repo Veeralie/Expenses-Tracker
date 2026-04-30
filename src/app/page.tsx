@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
+  CheckCircle,
   CreditCard,
   Pencil,
   Plus,
@@ -47,12 +48,37 @@ const categories = [
   "Customize",
 ];
 
+const todayString = () => new Date().toISOString().slice(0, 10);
+
+const daysUntilDue = (dueDate?: string) => {
+  if (!dueDate) return null;
+
+  const today = new Date(todayString());
+  const due = new Date(dueDate);
+  const diff = Math.ceil(
+    (due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  return diff;
+};
+
+const getDueLabel = (t: Transaction) => {
+  if (t.type !== "expense" || t.status === "paid") return null;
+
+  const diff = daysUntilDue(t.dueDate);
+
+  if (diff === null) return null;
+  if (diff < 0) return "Overdue";
+  if (diff === 0) return "Due Today";
+  if (diff <= 2) return "Due Soon";
+
+  return null;
+};
+
 export default function Home() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [currency, setCurrency] = useState("USD");
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().slice(0, 10)
-  );
+  const [selectedDate, setSelectedDate] = useState(todayString());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [customCategory, setCustomCategory] = useState("");
 
@@ -61,7 +87,9 @@ export default function Home() {
     amount: "",
     type: "expense",
     category: "Bills",
-    date: new Date().toISOString().slice(0, 10),
+    date: todayString(),
+    recurrence: "none",
+    dueDate: todayString(),
   });
 
   useEffect(() => {
@@ -90,6 +118,8 @@ export default function Home() {
       type: "expense",
       category: "Bills",
       date: selectedDate,
+      recurrence: "none",
+      dueDate: selectedDate,
     });
   };
 
@@ -106,6 +136,13 @@ export default function Home() {
               type: form.type as "expense" | "income",
               category: finalCategory,
               date: form.date,
+              recurrence: form.recurrence as
+                | "none"
+                | "weekly"
+                | "monthly"
+                | "annually",
+              dueDate: form.dueDate,
+              status: t.status || "pending",
             }
           : t
       );
@@ -122,6 +159,13 @@ export default function Home() {
       type: form.type as "expense" | "income",
       category: finalCategory,
       date: form.date,
+      recurrence: form.recurrence as
+        | "none"
+        | "weekly"
+        | "monthly"
+        | "annually",
+      dueDate: form.dueDate,
+      status: "pending",
     };
 
     saveAll([...transactions, newTx]);
@@ -140,6 +184,8 @@ export default function Home() {
       type: t.type,
       category: isPresetCategory ? t.category : "Customize",
       date: t.date?.slice(0, 10) || selectedDate,
+      recurrence: t.recurrence || "none",
+      dueDate: t.dueDate?.slice(0, 10) || t.date?.slice(0, 10) || selectedDate,
     });
   };
 
@@ -147,15 +193,52 @@ export default function Home() {
     saveAll(transactions.filter((t) => t.id !== id));
   };
 
+  const markAsPaid = (id: string) => {
+    const updated = transactions.map((t) =>
+      t.id === id ? { ...t, status: "paid" as const } : t
+    );
+
+    saveAll(updated);
+  };
+
+  const extendDueDate = (id: string) => {
+    const days = prompt("Extend by how many days?");
+
+    if (!days || Number.isNaN(Number(days))) return;
+
+    const updated = transactions.map((t) => {
+      if (t.id !== id) return t;
+
+      const currentDue = new Date(t.dueDate || t.date);
+      currentDue.setDate(currentDue.getDate() + Number(days));
+
+      return {
+        ...t,
+        dueDate: currentDue.toISOString().slice(0, 10),
+        status: "pending" as const,
+      };
+    });
+
+    saveAll(updated);
+  };
+
   const income = transactions
     .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const expenses = transactions
+  const paidExpenses = transactions
+    .filter((t) => t.type === "expense" && t.status === "paid")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const totalExpenses = transactions
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const balance = income - expenses;
+  const balance = income - paidExpenses;
+
+  const dueSoonCount = transactions.filter(
+    (t) => getDueLabel(t) === "Due Soon" || getDueLabel(t) === "Due Today"
+  ).length;
 
   const days = Array.from({ length: 30 }, (_, i) => {
     const d = new Date();
@@ -196,7 +279,7 @@ export default function Home() {
                 Expenses Tracker
               </h1>
               <p className="mt-2 max-w-2xl text-blue-100">
-                Track income, expenses, bills, calendar payments, and spending
+                Track income, expenses, recurring bills, due dates, and spending
                 trends.
               </p>
             </div>
@@ -221,7 +304,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="mb-6 grid gap-4 md:grid-cols-3">
+        <section className="mb-6 grid gap-4 md:grid-cols-4">
           <SummaryCard
             title="Total Income"
             amount={income}
@@ -230,19 +313,28 @@ export default function Home() {
             currency={currencySymbols[currency]}
           />
           <SummaryCard
-            title="Total Expenses"
-            amount={expenses}
-            icon={<CreditCard />}
+            title="Paid Expenses"
+            amount={paidExpenses}
+            icon={<CheckCircle />}
             color="text-rose-400"
             currency={currencySymbols[currency]}
           />
           <SummaryCard
             title="Remaining Balance"
             amount={balance}
-            icon={<CalendarDays />}
+            icon={<CreditCard />}
             color={balance >= 0 ? "text-blue-300" : "text-rose-400"}
             currency={currencySymbols[currency]}
           />
+          <div className="rounded-[2rem] border border-white/10 bg-white/10 p-5 shadow-2xl backdrop-blur">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20">
+              <CalendarDays />
+            </div>
+            <p className="text-sm text-blue-100">Due Soon</p>
+            <p className="mt-1 text-3xl font-black text-yellow-300">
+              {dueSoonCount}
+            </p>
+          </div>
         </section>
 
         <section className="grid gap-6 lg:grid-cols-3">
@@ -269,7 +361,13 @@ export default function Home() {
 
               <select
                 value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value })}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    type: e.target.value,
+                    category: e.target.value === "income" ? "Customize" : "Bills",
+                  })
+                }
                 className="w-full rounded-2xl border border-white/10 bg-white/90 p-3 text-slate-900"
               >
                 <option value="expense">Expense</option>
@@ -290,7 +388,11 @@ export default function Home() {
 
               {form.category === "Customize" && (
                 <input
-                  placeholder="Enter custom category"
+                  placeholder={
+                    form.type === "income"
+                      ? "Salary, Bonus, Part-time..."
+                      : "Enter custom category"
+                  }
                   value={customCategory}
                   onChange={(e) => setCustomCategory(e.target.value)}
                   className="w-full rounded-2xl border border-white/10 bg-white/90 p-3 text-slate-900"
@@ -300,9 +402,41 @@ export default function Home() {
               <input
                 type="date"
                 value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    date: e.target.value,
+                    dueDate: e.target.value,
+                  })
+                }
                 className="w-full rounded-2xl border border-white/10 bg-white/90 p-3 text-slate-900"
               />
+
+              {form.type === "expense" && (
+                <>
+                  <select
+                    value={form.recurrence}
+                    onChange={(e) =>
+                      setForm({ ...form, recurrence: e.target.value })
+                    }
+                    className="w-full rounded-2xl border border-white/10 bg-white/90 p-3 text-slate-900"
+                  >
+                    <option value="none">No Recurrence</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="annually">Annually</option>
+                  </select>
+
+                  <input
+                    type="date"
+                    value={form.dueDate}
+                    onChange={(e) =>
+                      setForm({ ...form, dueDate: e.target.value })
+                    }
+                    className="w-full rounded-2xl border border-white/10 bg-white/90 p-3 text-slate-900"
+                  />
+                </>
+              )}
 
               <button
                 onClick={handleSave}
@@ -336,6 +470,10 @@ export default function Home() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
+            <p className="mt-3 text-sm text-blue-100">
+              Total scheduled expenses: {currencySymbols[currency]}
+              {totalExpenses}
+            </p>
           </div>
         </section>
 
@@ -354,7 +492,7 @@ export default function Home() {
                     key={day}
                     onClick={() => {
                       setSelectedDate(day);
-                      setForm({ ...form, date: day });
+                      setForm({ ...form, date: day, dueDate: day });
                     }}
                     className={`rounded-2xl p-3 text-sm font-bold shadow ${
                       selectedDate === day
@@ -389,47 +527,101 @@ export default function Home() {
                 </p>
               )}
 
-              {selectedTransactions.map((t) => (
-                <div
-                  key={t.id}
-                  className="flex items-center justify-between rounded-2xl bg-white p-4 text-slate-900 shadow-lg"
-                >
-                  <div>
-                    <p className="font-black">{t.name}</p>
-                    <p className="text-sm text-slate-500">{t.category}</p>
-                  </div>
+              {selectedTransactions.map((t) => {
+                const dueLabel = getDueLabel(t);
 
-                  <div className="text-right">
-                    <p
-                      className={`font-black ${
-                        t.type === "expense"
-                          ? "text-rose-600"
-                          : "text-emerald-600"
-                      }`}
-                    >
-                      {t.type === "expense" ? "-" : "+"}
-                      {currencySymbols[currency]}
-                      {t.amount}
-                    </p>
+                return (
+                  <div
+                    key={t.id}
+                    className="rounded-2xl bg-white p-4 text-slate-900 shadow-lg"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-black">{t.name}</p>
 
-                    <div className="mt-2 flex gap-2">
-                      <button
-                        onClick={() => handleEdit(t)}
-                        className="rounded-lg bg-blue-100 p-2 text-blue-700 hover:bg-blue-200"
-                      >
-                        <Pencil size={15} />
-                      </button>
+                          {t.status === "paid" && (
+                            <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-bold text-emerald-700">
+                              Paid
+                            </span>
+                          )}
 
-                      <button
-                        onClick={() => handleDelete(t.id)}
-                        className="rounded-lg bg-rose-100 p-2 text-rose-700 hover:bg-rose-200"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                          {dueLabel && (
+                            <span
+                              className={`rounded-full px-2 py-1 text-xs font-bold ${
+                                dueLabel === "Overdue"
+                                  ? "bg-rose-100 text-rose-700"
+                                  : dueLabel === "Due Today"
+                                  ? "bg-orange-100 text-orange-700"
+                                  : "bg-yellow-100 text-yellow-700"
+                              }`}
+                            >
+                              {dueLabel}
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="text-sm text-slate-500">{t.category}</p>
+
+                        {t.type === "expense" && (
+                          <p className="text-xs text-slate-400">
+                            Due: {t.dueDate || t.date} · Recurring:{" "}
+                            {t.recurrence || "none"}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="text-right">
+                        <p
+                          className={`font-black ${
+                            t.type === "expense"
+                              ? "text-rose-600"
+                              : "text-emerald-600"
+                          }`}
+                        >
+                          {t.type === "expense" ? "-" : "+"}
+                          {currencySymbols[currency]}
+                          {t.amount}
+                        </p>
+
+                        <div className="mt-2 flex flex-wrap justify-end gap-2">
+                          <button
+                            onClick={() => handleEdit(t)}
+                            className="rounded-lg bg-blue-100 p-2 text-blue-700 hover:bg-blue-200"
+                          >
+                            <Pencil size={15} />
+                          </button>
+
+                          {t.type === "expense" && t.status !== "paid" && (
+                            <>
+                              <button
+                                onClick={() => markAsPaid(t.id)}
+                                className="rounded-lg bg-emerald-100 px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-200"
+                              >
+                                Paid
+                              </button>
+
+                              <button
+                                onClick={() => extendDueDate(t.id)}
+                                className="rounded-lg bg-yellow-100 px-3 py-2 text-xs font-bold text-yellow-700 hover:bg-yellow-200"
+                              >
+                                Extend
+                              </button>
+                            </>
+                          )}
+
+                          <button
+                            onClick={() => handleDelete(t.id)}
+                            className="rounded-lg bg-rose-100 p-2 text-rose-700 hover:bg-rose-200"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>
