@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "../lib/supabase";
+import type { User } from "@supabase/supabase-js";
 import {
   CalendarDays,
   CheckCircle,
@@ -21,6 +21,7 @@ import {
   YAxis,
 } from "recharts";
 import {
+  supabase,
   getTransactions,
   saveTransaction,
   updateTransaction,
@@ -77,17 +78,38 @@ const getDueLabel = (t: Transaction) => {
 export default function Home() {
   
   useEffect(() => {
-  const testSupabase = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("transactions")
-        .select("*");
+  const setupAuth = async () => {
+    const { data } = await supabase.auth.getUser();
+    setUser(data.user);
+  };
 
-      console.log("Supabase data:", data);
-      console.log("Supabase error:", error);
-    } catch (err) {
-      console.log("Unexpected error:", err);
+  setupAuth();
+
+  const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    setUser(session?.user ?? null);
+  });
+
+  const savedCurrency = localStorage.getItem("currency");
+  if (savedCurrency) setCurrency(savedCurrency);
+
+  return () => {
+    data.subscription.unsubscribe();
+  };
+}, []);
+
+useEffect(() => {
+  const loadTransactions = async () => {
+    if (!user) {
+      setTransactions([]);
+      return;
     }
+
+    const data = await getTransactions();
+    setTransactions(data);
+  };
+
+  loadTransactions();
+}, [user]);
   };
 
   testSupabase();
@@ -98,6 +120,9 @@ export default function Home() {
   const [selectedDate, setSelectedDate] = useState(todayString());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [customCategory, setCustomCategory] = useState("");
+  const [user, setUser] = useState<User | null>(null);
+  const [email, setEmail] = useState("");
+  const [authMessage, setAuthMessage] = useState("");
 
   const [form, setForm] = useState({
     name: "",
@@ -126,6 +151,26 @@ export default function Home() {
       ? customCategory.trim()
       : form.category;
 
+  const signIn = async () => {
+  if (!email) return;
+
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: window.location.origin,
+    },
+  });
+
+  setAuthMessage(
+    error ? error.message : "Check your email for the login link."
+  );
+};
+
+const signOut = async () => {
+  await supabase.auth.signOut();
+  setUser(null);
+  setTransactions([]);
+};
   const resetForm = () => {
     setEditingId(null);
     setCustomCategory("");
@@ -141,7 +186,10 @@ export default function Home() {
   };
 
   const handleSave = async () => {
-    if (!form.name || !form.amount) return;
+  if (!user) {
+    alert("Please log in first.");
+    return;
+  }
 
     if (editingId) {
       const updated = transactions.map((t) =>
