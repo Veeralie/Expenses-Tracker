@@ -17,8 +17,6 @@ export type Transaction = {
   status?: "pending" | "paid";
 };
 
-
-// ✅ GET ALL
 export async function getTransactions(): Promise<Transaction[]> {
   const { data, error } = await supabase
     .from("transactions")
@@ -33,8 +31,6 @@ export async function getTransactions(): Promise<Transaction[]> {
   return data || [];
 }
 
-
-// ✅ INSERT
 export async function saveTransaction(tx: Transaction) {
   const { data, error } = await supabase
     .from("transactions")
@@ -50,26 +46,34 @@ export async function saveTransaction(tx: Transaction) {
   return data;
 }
 
-
-// ✅ UPDATE
-export async function updateTransaction(id: string, updates: Partial<Transaction>) {
+export async function updateTransaction(
+  transaction: Transaction
+): Promise<Transaction | null> {
   const { data, error } = await supabase
     .from("transactions")
-    .update(updates)
-    .eq("id", id)
+    .update({
+      name: transaction.name,
+      amount: transaction.amount,
+      type: transaction.type,
+      category: transaction.category,
+      date: transaction.date,
+      recurrence: transaction.recurrence,
+      due_date: transaction.dueDate,
+      status: transaction.status || "pending",
+    })
+    .eq("id", transaction.id)
     .select()
     .single();
 
   if (error) {
-    console.error(error);
+    console.error("Update transaction error:", error);
+    alert(error.message);
     return null;
   }
 
-  return data;
+  return mapFromDb(data);
 }
 
-
-// ✅ DELETE
 export async function deleteTransaction(id: string) {
   const { error } = await supabase
     .from("transactions")
