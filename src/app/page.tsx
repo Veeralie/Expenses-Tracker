@@ -56,7 +56,6 @@ const todayString = () => new Date().toISOString().slice(0, 10);
 
 const daysUntilDue = (dueDate?: string) => {
   if (!dueDate) return null;
-
   const today = new Date(todayString());
   const due = new Date(dueDate);
   return Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
@@ -76,48 +75,13 @@ const getDueLabel = (t: Transaction) => {
 };
 
 export default function Home() {
-  
-  useEffect(() => {
-  const setupAuth = async () => {
-    const { data } = await supabase.auth.getUser();
-    setUser(data.user);
-  };
-
-  setupAuth();
-
-useEffect(() => {
-  const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-    setUser(session?.user ?? null);
-  });
-
-  const savedCurrency = localStorage.getItem("currency");
-  if (savedCurrency) setCurrency(savedCurrency);
-
-  return () => {
-    data.subscription.unsubscribe();
-  };
-}, []);
-
-useEffect(() => {
-  const loadTransactions = async () => {
-    if (!user) {
-      setTransactions([]);
-      return;
-    }
-
-    const data = await getTransactions();
-    setTransactions(data);
-  };
-
-  loadTransactions();
-}, [user]);
-
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [currency, setCurrency] = useState("USD");
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(todayString());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [customCategory, setCustomCategory] = useState("");
+
   const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState("");
   const [authMessage, setAuthMessage] = useState("");
@@ -133,16 +97,38 @@ useEffect(() => {
   });
 
   useEffect(() => {
-  const loadTransactions = async () => {
-    const data = await getTransactions();
-    setTransactions(data);
-  };
+    const setupAuth = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data.user);
+    };
 
-  loadTransactions();
+    setupAuth();
 
-  const savedCurrency = localStorage.getItem("currency");
-  if (savedCurrency) setCurrency(savedCurrency);
-}, []);
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    const savedCurrency = localStorage.getItem("currency");
+    if (savedCurrency) setCurrency(savedCurrency);
+
+    return () => {
+      data.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    const loadTransactions = async () => {
+      if (!user) {
+        setTransactions([]);
+        return;
+      }
+
+      const data = await getTransactions();
+      setTransactions(data);
+    };
+
+    loadTransactions();
+  }, [user]);
 
   const finalCategory =
     form.category === "Customize" && customCategory.trim()
@@ -150,25 +136,26 @@ useEffect(() => {
       : form.category;
 
   const signIn = async () => {
-  if (!email) return;
+    if (!email) return;
 
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: window.location.origin,
-    },
-  });
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: window.location.origin,
+      },
+    });
 
-  setAuthMessage(
-    error ? error.message : "Check your email for the login link."
-  );
-};
+    setAuthMessage(
+      error ? error.message : "Check your email for the login link."
+    );
+  };
 
-const signOut = async () => {
-  await supabase.auth.signOut();
-  setUser(null);
-  setTransactions([]);
-};
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setTransactions([]);
+  };
+
   const resetForm = () => {
     setEditingId(null);
     setCustomCategory("");
@@ -184,10 +171,12 @@ const signOut = async () => {
   };
 
   const handleSave = async () => {
-  if (!user) {
-    alert("Please log in first.");
-    return;
-  }
+    if (!user) {
+      alert("Please log in first.");
+      return;
+    }
+
+    if (!form.name || !form.amount) return;
 
     if (editingId) {
       const updated = transactions.map((t) =>
@@ -205,18 +194,19 @@ const signOut = async () => {
                 | "monthly"
                 | "annually",
               dueDate: form.dueDate,
-              status: t.status || "pending",
             }
           : t
       );
+
+      const changed = updated.find((t) => t.id === editingId);
+      if (changed) await updateTransaction(changed);
 
       setTransactions(updated);
       resetForm();
       return;
     }
 
-    const newTx: Transaction = {
-      id: Date.now().toString(),
+    const saved = await saveTransaction({
       name: form.name,
       amount: Number(form.amount),
       type: form.type as "expense" | "income",
@@ -229,28 +219,13 @@ const signOut = async () => {
         | "annually",
       dueDate: form.dueDate,
       status: "pending",
-    };
+    });
 
-    const saved = await saveTransaction({
-  name: form.name,
-  amount: Number(form.amount),
-  type: form.type as "expense" | "income",
-  category: finalCategory,
-  date: form.date,
-  recurrence: form.recurrence as
-    | "none"
-    | "weekly"
-    | "monthly"
-    | "annually",
-  dueDate: form.dueDate,
-  status: "pending",
-});
+    if (saved) {
+      setTransactions([saved, ...transactions]);
+    }
 
-if (saved) {
-  setTransactions([saved, ...transactions]);
-}
-
-resetForm();
+    resetForm();
   };
 
   const handleEdit = (t: Transaction) => {
@@ -271,19 +246,22 @@ resetForm();
   };
 
   const handleDelete = async (id: string) => {
-  await deleteTransaction(id);
-  setTransactions(transactions.filter((t) => t.id !== id));
-};
-
-  const markAsPaid = (id: string) => {
-    setTransactions(
-      transactions.map((t) =>
-        t.id === id ? { ...t, status: "paid" as const } : t
-      )
-    );
+    await deleteTransaction(id);
+    setTransactions(transactions.filter((t) => t.id !== id));
   };
 
-  const extendDueDate = (id: string) => {
+  const markAsPaid = async (id: string) => {
+    const updated = transactions.map((t) =>
+      t.id === id ? { ...t, status: "paid" as const } : t
+    );
+
+    const changed = updated.find((t) => t.id === id);
+    if (changed) await updateTransaction(changed);
+
+    setTransactions(updated);
+  };
+
+  const extendDueDate = async (id: string) => {
     const days = prompt("Extend by how many days?");
     if (!days || Number.isNaN(Number(days))) return;
 
@@ -299,6 +277,9 @@ resetForm();
         status: "pending" as const,
       };
     });
+
+    const changed = updated.find((t) => t.id === id);
+    if (changed) await updateTransaction(changed);
 
     setTransactions(updated);
   };
@@ -360,39 +341,40 @@ resetForm();
     }));
   }, [transactions]);
 
-if (!user) {
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-6 text-white">
-      <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-2xl backdrop-blur">
-        <h1 className="mb-2 text-3xl font-black">Expenses Tracker</h1>
-        <p className="mb-5 text-blue-100">
-          Log in with your email so your budget data is saved securely.
-        </p>
-
-        <input
-          type="email"
-          placeholder="Enter your email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="mb-3 w-full rounded-2xl bg-white p-3 text-slate-900"
-        />
-
-        <button
-          onClick={signIn}
-          className="w-full rounded-2xl bg-blue-500 p-3 font-bold text-white hover:bg-blue-600"
-        >
-          Send Login Link
-        </button>
-
-        {authMessage && (
-          <p className="mt-4 rounded-xl bg-white/10 p-3 text-sm text-blue-100">
-            {authMessage}
+  if (!user) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-6 text-white">
+        <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-2xl backdrop-blur">
+          <h1 className="mb-2 text-3xl font-black">Expenses Tracker</h1>
+          <p className="mb-5 text-blue-100">
+            Log in with your email so your budget data is saved securely.
           </p>
-        )}
-      </div>
-    </main>
-  );
-}
+
+          <input
+            type="email"
+            placeholder="Enter your email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="mb-3 w-full rounded-2xl bg-white p-3 text-slate-900"
+          />
+
+          <button
+            onClick={signIn}
+            className="w-full rounded-2xl bg-blue-500 p-3 font-bold text-white hover:bg-blue-600"
+          >
+            Send Login Link
+          </button>
+
+          {authMessage && (
+            <p className="mt-4 rounded-xl bg-white/10 p-3 text-sm text-blue-100">
+              {authMessage}
+            </p>
+          )}
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-4 text-white md:p-8">
       <div className="mx-auto max-w-7xl">
@@ -411,23 +393,32 @@ if (!user) {
               </p>
             </div>
 
-            <select
-              value={currency}
-              onChange={(e) => {
-                setCurrency(e.target.value);
-                localStorage.setItem("currency", e.target.value);
-              }}
-              className="rounded-2xl border border-white/20 bg-white/90 p-3 font-semibold text-slate-900 shadow-lg"
-            >
-              <option value="USD">USD - US Dollar</option>
-              <option value="GBP">GBP - British Pound</option>
-              <option value="EUR">EUR - Euro</option>
-              <option value="PHP">PHP - Philippine Peso</option>
-              <option value="CAD">CAD - Canadian Dollar</option>
-              <option value="AUD">AUD - Australian Dollar</option>
-              <option value="INR">INR - Indian Rupee</option>
-              <option value="JPY">JPY - Japanese Yen</option>
-            </select>
+            <div className="flex flex-col gap-3 md:flex-row">
+              <select
+                value={currency}
+                onChange={(e) => {
+                  setCurrency(e.target.value);
+                  localStorage.setItem("currency", e.target.value);
+                }}
+                className="rounded-2xl border border-white/20 bg-white/90 p-3 font-semibold text-slate-900 shadow-lg"
+              >
+                <option value="USD">USD - US Dollar</option>
+                <option value="GBP">GBP - British Pound</option>
+                <option value="EUR">EUR - Euro</option>
+                <option value="PHP">PHP - Philippine Peso</option>
+                <option value="CAD">CAD - Canadian Dollar</option>
+                <option value="AUD">AUD - Australian Dollar</option>
+                <option value="INR">INR - Indian Rupee</option>
+                <option value="JPY">JPY - Japanese Yen</option>
+              </select>
+
+              <button
+                onClick={signOut}
+                className="rounded-2xl bg-white/20 px-4 py-3 font-bold text-white hover:bg-white/30"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </section>
 
@@ -492,7 +483,8 @@ if (!user) {
                   setForm({
                     ...form,
                     type: e.target.value,
-                    category: e.target.value === "income" ? "Customize" : "Bills",
+                    category:
+                      e.target.value === "income" ? "Customize" : "Bills",
                   })
                 }
                 className="w-full rounded-2xl border border-white/10 bg-white/90 p-3 text-slate-900"
@@ -728,19 +720,6 @@ if (!user) {
                             {dayExpenses}
                           </p>
                         )}
-
-                        <div className="flex gap-1">
-                          {dayTransactions.slice(0, 3).map((tx) => (
-                            <span
-                              key={tx.id}
-                              className={`h-2 w-2 rounded-full ${
-                                tx.type === "income"
-                                  ? "bg-emerald-500"
-                                  : "bg-rose-500"
-                              }`}
-                            />
-                          ))}
-                        </div>
                       </div>
                     )}
                   </button>
@@ -781,15 +760,7 @@ if (!user) {
                           )}
 
                           {dueLabel && (
-                            <span
-                              className={`rounded-full px-2 py-1 text-xs font-bold ${
-                                dueLabel === "Overdue"
-                                  ? "bg-rose-100 text-rose-700"
-                                  : dueLabel === "Due Today"
-                                  ? "bg-orange-100 text-orange-700"
-                                  : "bg-yellow-100 text-yellow-700"
-                              }`}
-                            >
+                            <span className="rounded-full bg-yellow-100 px-2 py-1 text-xs font-bold text-yellow-700">
                               {dueLabel}
                             </span>
                           )}
