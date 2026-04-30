@@ -17,7 +17,6 @@ export type Transaction = {
   status?: "pending" | "paid";
 };
 
-// 🔁 Map DB → App format
 const mapFromDb = (row: any): Transaction => ({
   id: row.id,
   name: row.name,
@@ -30,29 +29,45 @@ const mapFromDb = (row: any): Transaction => ({
   status: row.status || "pending",
 });
 
-// 📥 GET
 export async function getTransactions(): Promise<Transaction[]> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return [];
+
   const { data, error } = await supabase
     .from("transactions")
     .select("*")
+    .eq("user_id", user.id)
     .order("date", { ascending: false });
 
   if (error) {
     console.error("Fetch error:", error);
+    alert(error.message);
     return [];
   }
 
-  return data.map(mapFromDb);
+  return (data || []).map(mapFromDb);
 }
 
-// ➕ CREATE
 export async function saveTransaction(
   transaction: Omit<Transaction, "id">
 ): Promise<Transaction | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    alert("No logged-in user found.");
+    return null;
+  }
+
   const { data, error } = await supabase
     .from("transactions")
     .insert([
       {
+        user_id: user.id,
         name: transaction.name,
         amount: transaction.amount,
         type: transaction.type,
@@ -75,10 +90,15 @@ export async function saveTransaction(
   return mapFromDb(data);
 }
 
-// ✏️ UPDATE (fixed version)
 export async function updateTransaction(
   transaction: Transaction
 ): Promise<Transaction | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return null;
+
   const { data, error } = await supabase
     .from("transactions")
     .update({
@@ -92,6 +112,7 @@ export async function updateTransaction(
       status: transaction.status || "pending",
     })
     .eq("id", transaction.id)
+    .eq("user_id", user.id)
     .select()
     .single();
 
@@ -104,12 +125,18 @@ export async function updateTransaction(
   return mapFromDb(data);
 }
 
-// ❌ DELETE
 export async function deleteTransaction(id: string) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return;
+
   const { error } = await supabase
     .from("transactions")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .eq("user_id", user.id);
 
   if (error) {
     console.error("Delete error:", error);
