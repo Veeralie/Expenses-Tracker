@@ -124,8 +124,15 @@ export default function Home() {
         setTransactions([]);
         return;
       }
+      
+      const data = await getTransactions();
+      setTransactions(data);
+    };
 
-      useEffect(() => {
+    loadTransactions();
+  }, [user]);
+
+  useEffect(() => {
   if (cooldown === 0) return;
 
   const timer = setInterval(() => {
@@ -134,13 +141,6 @@ export default function Home() {
 
   return () => clearInterval(timer);
 }, [cooldown]);
-      
-      const data = await getTransactions();
-      setTransactions(data);
-    };
-
-    loadTransactions();
-  }, [user]);
 
   const finalCategory =
     form.category === "Customize" && customCategory.trim()
