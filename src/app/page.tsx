@@ -389,7 +389,7 @@ export default function Home() {
   {authLoading
     ? "Sending..."
     : cooldown > 0
-    ? `Wait ${cooldown}s`
+    ? `Wait ${Math.floor(cooldown / 60)}:${String(cooldown % 60).padStart(2, "0")}`
     : "Send Login Link"}
 </button>
           
