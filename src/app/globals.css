@@ -3,6 +3,6 @@
 @tailwind utilities;
 
 :root { color-scheme: light; }
-body { margin: 0; background: #f8fafc; color: #0f172a; }
+body { margin: 0; background: #f5f5f5; color: #0f172a; }
 * { box-sizing: border-box; }
 input, select, button { font: inherit; }
