@@ -116,3 +116,36 @@ export async function deleteTransaction(id: string) {
     alert(error.message);
   }
 }
+
+export async function createNextRecurringTransaction(
+  transaction: Transaction
+): Promise<Transaction | null> {
+  if (!transaction.recurrence || transaction.recurrence === "none") {
+    return null;
+  }
+
+  const nextDate = new Date(transaction.dueDate || transaction.date);
+
+  if (transaction.recurrence === "weekly") {
+    nextDate.setDate(nextDate.getDate() + 7);
+  }
+
+  if (transaction.recurrence === "monthly") {
+    nextDate.setMonth(nextDate.getMonth() + 1);
+  }
+
+  if (transaction.recurrence === "annually") {
+    nextDate.setFullYear(nextDate.getFullYear() + 1);
+  }
+
+  return saveTransaction({
+    name: transaction.name,
+    amount: transaction.amount,
+    type: transaction.type,
+    category: transaction.category,
+    date: nextDate.toISOString().slice(0, 10),
+    recurrence: transaction.recurrence,
+    dueDate: nextDate.toISOString().slice(0, 10),
+    status: "pending",
+  });
+}
