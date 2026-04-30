@@ -199,63 +199,64 @@ useEffect(() => {
   };
 
   const handleSave = async () => {
-    if (!user) {
-      alert("Please log in first.");
-      return;
-    }
+  if (!user) {
+    alert("Please log in first.");
+    return;
+  }
 
-    if (!form.name || !form.amount) return;
+  if (!form.name || !form.amount) {
+    alert("Please enter name and amount.");
+    return;
+  }
 
-    if (editingId) {
-      const updated = transactions.map((t) =>
-        t.id === editingId
-          ? {
-              ...t,
-              name: form.name,
-              amount: Number(form.amount),
-              type: form.type as "expense" | "income",
-              category: finalCategory,
-              date: form.date,
-              recurrence: form.recurrence as
-                | "none"
-                | "weekly"
-                | "monthly"
-                | "annually",
-              dueDate: form.dueDate,
-            }
-          : t
-      );
-
-      const changed = updated.find((t) => t.id === editingId);
-      if (changed) await updateTransaction(changed);
-
-      setTransactions(updated);
-      resetForm();
-      return;
-    }
-
-    const saved = await saveTransaction({
-      name: form.name,
-      amount: Number(form.amount),
-      type: form.type as "expense" | "income",
-      category: finalCategory,
-      date: form.date,
-      recurrence: form.recurrence as
-        | "none"
-        | "weekly"
-        | "monthly"
-        | "annually",
-      dueDate: form.dueDate,
-      status: "pending",
-    });
-
-    if (saved) {
-      setTransactions([saved, ...transactions]);
-    }
-
-    resetForm();
+  const transactionData = {
+    name: form.name,
+    amount: Number(form.amount),
+    type: form.type as "expense" | "income",
+    category: finalCategory,
+    date: form.date,
+    recurrence: form.recurrence as "none" | "weekly" | "monthly" | "annually",
+    dueDate: form.dueDate,
+    status: "pending" as const,
   };
 
+  if (editingId) {
+    const updatedTransaction = {
+      ...transactionData,
+      id: editingId,
+    };
+
+    const saved = await updateTransaction(updatedTransaction);
+
+    if (!saved) {
+      alert("Update failed.");
+      return;
+    }
+
+    setTransactions((current) =>
+      current.map((t) => (t.id === editingId ? saved : t))
+    );
+
+    setSelectedDate(saved.date);
+    setCurrentMonth(new Date(saved.date));
+    resetForm();
+    return;
+  }
+
+  const saved = await saveTransaction(transactionData);
+
+  if (!saved) {
+    alert("Save failed. Check Supabase table/RLS.");
+    return;
+  }
+
+  setTransactions((current) => [saved, ...current]);
+  setSelectedDate(saved.date);
+  setCurrentMonth(new Date(saved.date));
+
+  resetForm();
+};
+  
   const handleEdit = (t: Transaction) => {
     const isPresetCategory = categories.includes(t.category);
 
