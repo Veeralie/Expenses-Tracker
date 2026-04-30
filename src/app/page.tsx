@@ -118,29 +118,29 @@ export default function Home() {
       data.subscription.unsubscribe();
     };
   }, []);
+  
+useEffect(() => {
+  const loadTransactions = async () => {
+    if (!user) {
+      setTransactions([]);
+      return;
+    }
 
-  useEffect(() => {
-    const loadTransactions = async () => {
-      if (!user) {
-        setTransactions([]);
-        return;
-      }
-      
-      const data = await getTransactions();
-      setTransactions(data);
-    };
+    const data = await getTransactions();
+    setTransactions(data);
+  };
 
-    loadTransactions();
-  }, [user]);
+  loadTransactions();
+}, [user]);
 
-  useEffect(() => {
-  if (cooldown === 0) return;
+useEffect(() => {
+  if (cooldown <= 0) return;
 
-  const timer = setInterval(() => {
-    setCooldown((prev) => prev - 1);
+  const timer = window.setTimeout(() => {
+    setCooldown((prev) => Math.max(prev - 1, 0));
   }, 1000);
 
-  return () => clearInterval(timer);
+  return () => window.clearTimeout(timer);
 }, [cooldown]);
 
   const finalCategory =
