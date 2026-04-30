@@ -12,7 +12,12 @@ export type Transaction = {
 
 export const getTransactions = (): Transaction[] => {
   if (typeof window === "undefined") return [];
-  return JSON.parse(localStorage.getItem("transactions") || "[]");
+
+  try {
+    return JSON.parse(localStorage.getItem("transactions") || "[]");
+  } catch {
+    return [];
+  }
 };
 
 export const saveTransactions = (data: Transaction[]) => {
