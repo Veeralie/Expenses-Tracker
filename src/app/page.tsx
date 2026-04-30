@@ -308,12 +308,6 @@ useEffect(() => {
   });
 };
 
-    const changed = updated.find((t) => t.id === id);
-    if (changed) await updateTransaction(changed);
-
-    setTransactions(updated);
-  };
-
   const extendDueDate = async (id: string) => {
     const days = prompt("Extend by how many days?");
     if (!days || Number.isNaN(Number(days))) return;
