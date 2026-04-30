@@ -153,6 +153,8 @@ export default function Home() {
     return;
   }
 
+  if (cooldown > 0) return;
+
   setAuthLoading(true);
   setAuthMessage("");
 
@@ -166,11 +168,13 @@ export default function Home() {
   setAuthLoading(false);
 
   if (error) {
-    setAuthMessage("Too many login emails. Please wait a moment.");
-  } else {
-    setAuthMessage("Login link sent. Check your email.");
-    setCooldown(900); // ⏱ 900 second cooldown
+    setAuthMessage("Too many login emails. Please wait before trying again.");
+    setCooldown(900);
+    return;
   }
+
+  setAuthMessage("Login link sent. Check your email.");
+  setCooldown(900);
 };
 
   const signOut = async () => {
