@@ -85,6 +85,7 @@ export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState("");
   const [authMessage, setAuthMessage] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -136,19 +137,29 @@ export default function Home() {
       : form.category;
 
   const signIn = async () => {
-    if (!email) return;
+  if (!email) {
+    setAuthMessage("Please enter your email address.");
+    return;
+  }
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: window.location.origin,
-      },
-    });
+  setAuthLoading(true);
+  setAuthMessage("");
 
-    setAuthMessage(
-      error ? error.message : "Check your email for the login link."
-    );
-  };
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: window.location.origin,
+    },
+  });
+
+  setAuthLoading(false);
+
+  setAuthMessage(
+    error
+      ? error.message
+      : "Login link sent. Please check your email, then click the confirmation link."
+  );
+};
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -359,11 +370,12 @@ export default function Home() {
           />
 
           <button
-            onClick={signIn}
-            className="w-full rounded-2xl bg-blue-500 p-3 font-bold text-white hover:bg-blue-600"
-          >
-            Send Login Link
-          </button>
+  onClick={signIn}
+  disabled={authLoading}
+  className="w-full rounded-2xl bg-blue-500 p-3 font-bold text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+>
+  {authLoading ? "Sending..." : "Send Login Link"}
+</button>
 
           {authMessage && (
             <p className="mt-4 rounded-xl bg-white/10 p-3 text-sm text-blue-100">
