@@ -121,11 +121,6 @@ export default function Home() {
   if (savedCurrency) setCurrency(savedCurrency);
 }, []);
 
-  const saveAll = (data: Transaction[]) => {
-    setTransactions(data);
-    saveTransactions(data);
-  };
-
   const finalCategory =
     form.category === "Customize" && customCategory.trim()
       ? customCategory.trim()
@@ -169,7 +164,7 @@ export default function Home() {
           : t
       );
 
-      saveAll(updated);
+      setTransactions(updated);
       resetForm();
       return;
     }
@@ -235,7 +230,7 @@ resetForm();
 };
 
   const markAsPaid = (id: string) => {
-    saveAll(
+    setTransactions(
       transactions.map((t) =>
         t.id === id ? { ...t, status: "paid" as const } : t
       )
@@ -259,7 +254,7 @@ resetForm();
       };
     });
 
-    saveAll(updated);
+    setTransactions(updated);
   };
 
   const getCalendarDays = (date: Date) => {
