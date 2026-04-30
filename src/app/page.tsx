@@ -362,6 +362,39 @@ resetForm();
     }));
   }, [transactions]);
 
+if (!user) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-6 text-white">
+      <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-2xl backdrop-blur">
+        <h1 className="mb-2 text-3xl font-black">Expenses Tracker</h1>
+        <p className="mb-5 text-blue-100">
+          Log in with your email so your budget data is saved securely.
+        </p>
+
+        <input
+          type="email"
+          placeholder="Enter your email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="mb-3 w-full rounded-2xl bg-white p-3 text-slate-900"
+        />
+
+        <button
+          onClick={signIn}
+          className="w-full rounded-2xl bg-blue-500 p-3 font-bold text-white hover:bg-blue-600"
+        >
+          Send Login Link
+        </button>
+
+        {authMessage && (
+          <p className="mt-4 rounded-xl bg-white/10 p-3 text-sm text-blue-100">
+            {authMessage}
+          </p>
+        )}
+      </div>
+    </main>
+  );
+}
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-4 text-white md:p-8">
       <div className="mx-auto max-w-7xl">
