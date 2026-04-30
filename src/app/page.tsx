@@ -22,7 +22,9 @@ import {
 } from "recharts";
 import {
   getTransactions,
-  saveTransactions,
+  saveTransaction,
+  updateTransaction,
+  deleteTransaction,
   Transaction,
 } from "../lib/sampleData";
 
@@ -108,11 +110,16 @@ export default function Home() {
   });
 
   useEffect(() => {
-    setTransactions(getTransactions());
+  const loadTransactions = async () => {
+    const data = await getTransactions();
+    setTransactions(data);
+  };
 
-    const savedCurrency = localStorage.getItem("currency");
-    if (savedCurrency) setCurrency(savedCurrency);
-  }, []);
+  loadTransactions();
+
+  const savedCurrency = localStorage.getItem("currency");
+  if (savedCurrency) setCurrency(savedCurrency);
+}, []);
 
   const saveAll = (data: Transaction[]) => {
     setTransactions(data);
@@ -138,7 +145,7 @@ export default function Home() {
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name || !form.amount) return;
 
     if (editingId) {
@@ -183,8 +190,26 @@ export default function Home() {
       status: "pending",
     };
 
-    saveAll([...transactions, newTx]);
-    resetForm();
+    const saved = await saveTransaction({
+  name: form.name,
+  amount: Number(form.amount),
+  type: form.type as "expense" | "income",
+  category: finalCategory,
+  date: form.date,
+  recurrence: form.recurrence as
+    | "none"
+    | "weekly"
+    | "monthly"
+    | "annually",
+  dueDate: form.dueDate,
+  status: "pending",
+});
+
+if (saved) {
+  setTransactions([saved, ...transactions]);
+}
+
+resetForm();
   };
 
   const handleEdit = (t: Transaction) => {
@@ -204,9 +229,10 @@ export default function Home() {
     });
   };
 
-  const handleDelete = (id: string) => {
-    saveAll(transactions.filter((t) => t.id !== id));
-  };
+  const handleDelete = async (id: string) => {
+  await deleteTransaction(id);
+  setTransactions(transactions.filter((t) => t.id !== id));
+};
 
   const markAsPaid = (id: string) => {
     saveAll(
