@@ -199,6 +199,8 @@ useEffect(() => {
   };
 
   const handleSave = async () => {
+  alert("HANDLE SAVE CLICKED");
+
   if (!user) {
     alert("Please log in first.");
     return;
