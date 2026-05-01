@@ -43,7 +43,6 @@ export async function getTransactions(): Promise<Transaction[]> {
     .order("date", { ascending: false });
 
   if (error) {
-    console.error("Fetch error:", error);
     alert(error.message);
     return [];
   }
@@ -82,7 +81,6 @@ export async function saveTransaction(
     .single();
 
   if (error) {
-    console.error("Insert error:", error);
     alert(error.message);
     return null;
   }
@@ -117,7 +115,6 @@ export async function updateTransaction(
     .single();
 
   if (error) {
-    console.error("Update error:", error);
     alert(error.message);
     return null;
   }
@@ -138,32 +135,19 @@ export async function deleteTransaction(id: string) {
     .eq("id", id)
     .eq("user_id", user.id);
 
-  if (error) {
-    console.error("Delete error:", error);
-    alert(error.message);
-  }
+  if (error) alert(error.message);
 }
 
 export async function createNextRecurringTransaction(
   transaction: Transaction
 ): Promise<Transaction | null> {
-  if (!transaction.recurrence || transaction.recurrence === "none") {
-    return null;
-  }
+  if (!transaction.recurrence || transaction.recurrence === "none") return null;
 
   const nextDate = new Date(transaction.dueDate || transaction.date);
 
-  if (transaction.recurrence === "weekly") {
-    nextDate.setDate(nextDate.getDate() + 7);
-  }
-
-  if (transaction.recurrence === "monthly") {
-    nextDate.setMonth(nextDate.getMonth() + 1);
-  }
-
-  if (transaction.recurrence === "annually") {
-    nextDate.setFullYear(nextDate.getFullYear() + 1);
-  }
+  if (transaction.recurrence === "weekly") nextDate.setDate(nextDate.getDate() + 7);
+  if (transaction.recurrence === "monthly") nextDate.setMonth(nextDate.getMonth() + 1);
+  if (transaction.recurrence === "annually") nextDate.setFullYear(nextDate.getFullYear() + 1);
 
   return saveTransaction({
     name: transaction.name,
