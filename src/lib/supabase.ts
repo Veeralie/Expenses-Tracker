@@ -81,9 +81,13 @@ export async function saveTransaction(
     .single();
 
   if (error) {
-    alert(error.message);
-    return null;
-  }
+  console.error("SAVE ERROR:", error);
+  alert("SAVE ERROR: " + error.message);
+  return null;
+}
+
+console.log("SAVE SUCCESS:", data);
+alert("Saved to Supabase");
 
   return mapFromDb(data);
 }
