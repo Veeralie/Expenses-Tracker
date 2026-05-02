@@ -103,29 +103,28 @@ export default function Home() {
   });
 
   useEffect(() => {
-    const setupAuth = async () => {
-      if (window.location.hash.includes("type=recovery")) {
-        await supabase.auth.signOut();
-        setUser(null);
-  setIsResetMode(true);
-}
-      const { data } = await supabase.auth.getUser();
-      setUser(data.user);
-    };
+  const setupAuth = async () => {
+    if (window.location.hash.includes("type=recovery")) {
+      setIsResetMode(true);
+    }
 
-    setupAuth();
+    const { data } = await supabase.auth.getUser();
+    setUser(data.user);
+  };
 
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
+  setupAuth();
 
-    const savedCurrency = localStorage.getItem("currency");
-    if (savedCurrency) setCurrency(savedCurrency);
+  const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    setUser(session?.user ?? null);
+  });
 
-    return () => {
-      data.subscription.unsubscribe();
-    };
-  }, []);
+  const savedCurrency = localStorage.getItem("currency");
+  if (savedCurrency) setCurrency(savedCurrency);
+
+  return () => {
+    data.subscription.unsubscribe();
+  };
+}, []);
   
 useEffect(() => {
   const loadTransactions = async () => {
@@ -230,6 +229,9 @@ useEffect(() => {
     return;
   }
 
+  setAuthLoading(true);
+  setAuthMessage("");
+
   const { error } = await supabase.auth.updateUser({
     password: newPassword,
   });
@@ -244,6 +246,8 @@ useEffect(() => {
     await supabase.auth.signOut();
     setUser(null);
   }
+
+  setAuthLoading(false);
 };
 
   const signOut = async () => {
