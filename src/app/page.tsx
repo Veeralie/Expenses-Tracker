@@ -554,24 +554,25 @@ useEffect(() => {
 }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-4 text-white md:p-8">
+    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 px-3 py-4 text-white md:px-8 md:py-8">
+  <div className="mx-auto max-w-7xl space-y-4 md:space-y-6">
       <div className="mx-auto max-w-7xl">
-        <section className="mb-6 overflow-hidden rounded-[2rem] bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-6 shadow-2xl md:p-8">
-          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+        <section className="rounded-[1.5rem] md:rounded-[2rem] bg-gradient-to-r from-blue-600 to-purple-700 p-5 md:p-8">
+          <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-end">
             <div>
               <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-blue-100">
                 Premium Budget Dashboard
               </p>
-              <h1 className="text-4xl font-black md:text-5xl">
-                Expenses Tracker
-              </h1>
-              <p className="mt-2 max-w-2xl text-blue-100">
+              <h1 className="text-3xl font-black md:text-5xl">
+  Expenses Tracker
+</h1>
+              <p className="mt-2 text-base md:text-xl">
                 Track income, expenses, recurring bills, due dates, and spending
                 trends.
               </p>
             </div>
 
-            <div className="flex flex-col gap-3 md:flex-row">
+           <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-end">
   <p className="rounded-2xl bg-white/15 px-4 py-3 text-sm font-semibold text-blue-100">
     {user?.email}
   </p>
