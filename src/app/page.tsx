@@ -170,12 +170,12 @@ useEffect(() => {
 
   if (error) {
     setAuthMessage("Too many login emails. Please wait before trying again.");
-    setCooldown(900);
+    setCooldown(60);
     return;
   }
 
   setAuthMessage("Login link sent. Check your email.");
-  setCooldown(900);
+  setCooldown(60);
 };
 
   const signOut = async () => {
@@ -199,9 +199,8 @@ useEffect(() => {
   };
 
   const handleSave = async () => {
-  alert("HANDLE SAVE CLICKED");
 
-  if (false &&!user) {
+  if (!user) {
     alert("Please log in first.");
     return;
   }
