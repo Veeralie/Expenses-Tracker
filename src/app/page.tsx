@@ -443,6 +443,14 @@ useEffect(() => {
           {authLoading ? "Logging in..." : "Log In"}
         </button>
 
+        <button
+  onClick={signUp}
+  disabled={authLoading}
+  className="w-full rounded-2xl bg-green-500 p-3 font-bold text-white mt-2"
+>
+  Sign Up
+</button>
+
         {authMessage && (
           <p className="mt-4 rounded-xl bg-white/10 p-3 text-sm text-white">
             {authMessage}
