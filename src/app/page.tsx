@@ -149,10 +149,15 @@ useEffect(() => {
       : form.category;
 
   const signIn = async () => {
-  if (!email) {
-    setAuthMessage("Please enter your email address.");
-    return;
+  const { error } = await supabase.auth.signInWithPassword({
+    email: "test@test.com",
+    password: "098765",
+  });
+
+  if (error) {
+    alert(error.message);
   }
+};
 
   if (cooldown > 0) return;
 
