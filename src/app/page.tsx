@@ -159,30 +159,6 @@ useEffect(() => {
   }
 };
 
-  if (cooldown > 0) return;
-
-  setAuthLoading(true);
-  setAuthMessage("");
-
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: window.location.origin,
-    },
-  });
-
-  setAuthLoading(false);
-
-  if (error) {
-    setAuthMessage("Too many login emails. Please wait before trying again.");
-    setCooldown(60);
-    return;
-  }
-
-  setAuthMessage("Login link sent. Check your email.");
-  setCooldown(60);
-};
-
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
