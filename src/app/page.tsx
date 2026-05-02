@@ -85,8 +85,9 @@ export default function Home() {
 
   const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState("");
-  const [authMessage, setAuthMessage] = useState("");
+  const [password, setPassword] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
+  const [authMessage, setAuthMessage] = useState("");
   const [cooldown, setCooldown] = useState(0);
 
   const [form, setForm] = useState({
@@ -149,14 +150,26 @@ useEffect(() => {
       : form.category;
 
   const signIn = async () => {
+  if (!email || !password) {
+    setAuthMessage("Please enter email and password.");
+    return;
+  }
+
+  setAuthLoading(true);
+  setAuthMessage("");
+
   const { error } = await supabase.auth.signInWithPassword({
-    email: "test@test.com",
-    password: "098765",
+    email,
+    password,
   });
 
   if (error) {
-    alert(error.message);
+    setAuthMessage(error.message);
+  }else{
+    setAuthMessage("");
   }
+
+  setAuthLoading(false);
 };
 
   const signOut = async () => {
@@ -372,43 +385,50 @@ useEffect(() => {
   }, [transactions]);
 
   if (!user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-6 text-white">
-        <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-2xl backdrop-blur">
-          <h1 className="mb-2 text-3xl font-black">Expenses Tracker</h1>
-          <p className="mb-5 text-blue-100">
-            Log in with your email so your budget data is saved securely.
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-slate-950 p-6">
+      <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/10 p-8 shadow-2xl">
+        <h1 className="mb-2 text-3xl font-black text-white">
+          Expenses Tracker
+        </h1>
+
+        <p className="mb-5 text-blue-100">
+          Log in with your email and password so your budget data is saved securely.
+        </p>
+
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="mb-3 w-full rounded-2xl bg-white p-3 text-slate-900"
+        />
+
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="mb-3 w-full rounded-2xl bg-white p-3 text-slate-900"
+        />
+
+        <button
+          onClick={signIn}
+          disabled={authLoading}
+          className="w-full rounded-2xl bg-blue-500 p-3 font-bold text-white disabled:opacity-60"
+        >
+          {authLoading ? "Logging in..." : "Log In"}
+        </button>
+
+        {authMessage && (
+          <p className="mt-4 rounded-xl bg-white/10 p-3 text-sm text-white">
+            {authMessage}
           </p>
-
-          <input
-            type="email"
-            placeholder="Enter your email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mb-3 w-full rounded-2xl bg-white p-3 text-slate-900"
-          />
-
-<button
-  onClick={signIn}
-  disabled={authLoading || cooldown > 0}
-  className="w-full rounded-2xl bg-blue-500 p-3 font-bold text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
->
-  {authLoading
-    ? "Sending..."
-    : cooldown > 0
-    ? `Wait ${Math.floor(cooldown / 60)}:${String(cooldown % 60).padStart(2, "0")}`
-    : "Send Login Link"}
-</button>
-          
-          {authMessage && (
-            <p className="mt-4 rounded-xl bg-white/10 p-3 text-sm text-blue-100">
-              {authMessage}
-            </p>
-          )}
-        </div>
-      </main>
-    );
-  }
+        )}
+      </div>
+    </main>
+  );
+}
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-4 text-white md:p-8">
