@@ -390,7 +390,7 @@ useEffect(() => {
     }));
   }, [transactions]);
 
-  if (false && !user) {
+  if (!user) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-6 text-white">
         <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/10 p-6 shadow-2xl backdrop-blur">
@@ -449,7 +449,7 @@ useEffect(() => {
 
             <div className="flex flex-col gap-3 md:flex-row">
   <p className="rounded-2xl bg-white/15 px-4 py-3 text-sm font-semibold text-blue-100">
-    {user.email}
+    {user?.email}
   </p>
 
   <select
