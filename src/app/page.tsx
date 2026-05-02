@@ -172,6 +172,29 @@ useEffect(() => {
   setAuthLoading(false);
 };
 
+  const signUp = async () => {
+  if (!email || !password) {
+    setAuthMessage("Please enter email and password.");
+    return;
+  }
+
+  setAuthLoading(true);
+  setAuthMessage("");
+
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+  });
+
+  if (error) {
+    setAuthMessage(error.message);
+  } else {
+    setAuthMessage("Account created! You can now log in.");
+  }
+
+  setAuthLoading(false);
+};
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
