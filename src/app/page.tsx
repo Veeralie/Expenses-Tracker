@@ -88,6 +88,8 @@ export default function Home() {
   const [password, setPassword] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [authMessage, setAuthMessage] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [isResetMode, setIsResetMode] = useState(false);
   const [cooldown, setCooldown] = useState(0);
 
   const [form, setForm] = useState({
@@ -102,6 +104,11 @@ export default function Home() {
 
   useEffect(() => {
     const setupAuth = async () => {
+      if (window.location.hash.includes("type=recovery")) {
+        await supabase.auth.signOut();
+        setUser(null);
+  setIsResetMode(true);
+}
       const { data } = await supabase.auth.getUser();
       setUser(data.user);
     };
@@ -215,6 +222,28 @@ useEffect(() => {
   }
 
   setAuthLoading(false);
+};
+
+  const updatePassword = async () => {
+  if (!newPassword) {
+    setAuthMessage("Please enter a new password.");
+    return;
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+
+  if (error) {
+    setAuthMessage(error.message);
+  } else {
+    setAuthMessage("Password updated successfully.");
+    setIsResetMode(false);
+    setNewPassword("");
+
+    await supabase.auth.signOut();
+    setUser(null);
+  }
 };
 
   const signOut = async () => {
@@ -429,6 +458,35 @@ useEffect(() => {
     }));
   }, [transactions]);
 
+  if (isResetMode) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-slate-950 p-6">
+      <div className="w-full max-w-md rounded-[2rem] bg-white/10 p-8 text-white">
+        <h1 className="mb-4 text-3xl font-black">Create new password</h1>
+
+        <input
+          type="password"
+          placeholder="New password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          className="mb-3 w-full rounded-2xl bg-white p-3 text-slate-900"
+        />
+
+        <button
+          onClick={updatePassword}
+          className="w-full rounded-2xl bg-blue-500 p-3 font-bold text-white"
+        >
+          Update Password
+        </button>
+
+        {authMessage && (
+          <p className="mt-4 rounded-xl bg-white/10 p-3 text-sm">{authMessage}</p>
+        )}
+      </div>
+    </main>
+  );
+}
+  
   if (!user) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-950 p-6">
