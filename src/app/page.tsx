@@ -605,7 +605,7 @@ useEffect(() => {
           </div>
         </section>
 
-        <section className="mb-6 grid gap-4 md:grid-cols-4">
+       <section className="mb-4 grid grid-cols-2 gap-3 md:mb-6 md:grid-cols-4 md:gap-4">
           <SummaryCard
             title="Total Income"
             amount={income}
@@ -627,7 +627,7 @@ useEffect(() => {
             color={balance >= 0 ? "text-blue-300" : "text-rose-400"}
             currency={currencySymbols[currency]}
           />
-          <div className="rounded-[2rem] border border-white/10 bg-white/10 p-5 shadow-2xl backdrop-blur">
+          <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-4 shadow-2xl backdrop-blur md:rounded-[2rem] md:p-5">
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20">
               <CalendarDays />
             </div>
