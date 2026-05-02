@@ -195,6 +195,28 @@ useEffect(() => {
   setAuthLoading(false);
 };
 
+  const resetPassword = async () => {
+  if (!email) {
+    setAuthMessage("Please enter your email first.");
+    return;
+  }
+
+  setAuthLoading(true);
+  setAuthMessage("");
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin,
+  });
+
+  if (error) {
+    setAuthMessage(error.message);
+  } else {
+    setAuthMessage("Password reset email sent. Check your inbox.");
+  }
+
+  setAuthLoading(false);
+};
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -449,6 +471,14 @@ useEffect(() => {
   className="w-full rounded-2xl bg-green-500 p-3 font-bold text-white mt-2"
 >
   Sign Up
+</button>
+
+        <button
+  onClick={resetPassword}
+  disabled={authLoading}
+  className="mt-2 w-full rounded-2xl bg-white/10 p-3 font-bold text-white"
+>
+  Forgot password?
 </button>
 
         {authMessage && (
